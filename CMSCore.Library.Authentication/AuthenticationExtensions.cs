@@ -6,27 +6,33 @@
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     public static class AuthenticationExtensions
     {
-        public static IServiceCollection AddCMSCoreAuthentication(this IServiceCollection services, IAuthenticationConfiguration configuration)
+        public static IServiceCollection AddCMSCoreAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
+            IAuthenticationConfiguration authenticationConfiguration = new AuthenticationConfiguration(configuration);
+
+            services.AddSingleton<IAuthenticationConfiguration>(authenticationConfiguration);
+
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
-                options.Authority = configuration.Domain;
-                options.Audience = configuration.ApiIdentifier;
+                options.Authority = authenticationConfiguration.Domain;
+                options.Audience = authenticationConfiguration.ApiIdentifier;
             });
 
-            services.AddAuthorization(options => options.SetPolicies(configuration));
+             services.AddAuthorization(options => options.SetPolicies(authenticationConfiguration));
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 
             return services;
         }
+
         public static AuthorizationOptions SetPolicies(this AuthorizationOptions options, IAuthenticationConfiguration configuration)
         {
             var policiesInConfig = configuration.Policies;
